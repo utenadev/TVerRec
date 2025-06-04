@@ -330,11 +330,43 @@ Describe 'Remove-File Tests' {
 
 			$testFolderPath = Join-Path (Get-TestDrive) 'TestFolder'
 			Remove-Item -Path (Get-TestDrive) -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
-			New-Item -ItemType Directory -Path $testFolderPath | Out-Null
-			$script:enableMultithread = $false
+        AfterAll {
+                        Remove-Item -Path (Get-TestDrive) -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
+                        Remove-Variable -Name enableMultithread, condition, delPeriod -ErrorAction SilentlyContinue
+                }
+        }
 
-			1..2 | ForEach-Object {
-				$filePath = Join-Path $testFolderPath "$_.txt"
+        Context 'パイプライン入力' {
+                BeforeAll {
+                        Function Get-TestDrive {}
+                        Mock Get-TestDrive { return 'PipelinePath' }
+
+                        $pipelineFolderPath = Join-Path (Get-TestDrive) 'PipelineFolder'
+                        Remove-Item -Path (Get-TestDrive) -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
+                        New-Item -ItemType Directory -Path $pipelineFolderPath | Out-Null
+                        $script:enableMultithread = $false
+
+                        $script:pipelineFiles = 1..2 | ForEach-Object {
+                                $filePath = Join-Path $pipelineFolderPath "$_`u{002d}pipe.txt"
+                                New-Item -ItemType File -Path $filePath | Out-Null
+                                (Get-Item $filePath).LastWriteTime = (Get-Date).AddDays(-2)
+                                $filePath
+                        }
+                }
+
+                It 'パイプライン入力で古いファイルを削除すること' {
+                        Get-ChildItem -Path $pipelineFolderPath -File | Remove-File -delPeriod 1
+
+                        foreach ($filePath in $script:pipelineFiles) {
+                                Test-Path $filePath | Should -BeFalse
+                        }
+                }
+
+                AfterAll {
+                        Remove-Item -Path (Get-TestDrive) -Recurse -Force -ErrorAction SilentlyContinue | Out-Null
+                        Remove-Variable -Name enableMultithread, pipelineFiles -ErrorAction SilentlyContinue
+                }
+        }
 				New-Item -ItemType File -Path $filePath | Out-Null
 				(Get-Item $filePath).LastWriteTime = (Get-Date).AddDays(-2)
 			}
