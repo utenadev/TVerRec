@@ -197,9 +197,9 @@ function ConvertFrom-UnixTime {
 			- `.ToLocalTime()` を使用して、現在のタイムゾーンの時刻に変換します。
 			- `Remove-Variable` は変数の明示的な削除を試みますが、影響は限定的です。
 	#>
-	[CmdletBinding()]
-	[OutputType([Void])]
-	Param ([Parameter(Mandatory = $true)][int64]$UnixTime)
+        [CmdletBinding()]
+        [OutputType([datetime])]
+        Param ([Parameter(Mandatory = $true)][int64]$UnixTime)
 	Write-Debug ('{0}' -f $MyInvocation.MyCommand.Name)
 	$EpochDate = Get-Date -Year 1970 -Month 1 -Day 1 -Hour 0 -Minute 0 -Second 0 -AsUTC
 	return ($EpochDate.AddSeconds($UnixTime).ToLocalTime())
